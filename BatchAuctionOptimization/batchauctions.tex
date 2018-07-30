@@ -574,7 +574,7 @@ model.
 As described earlier, the constraints \eqref{eq:nlp_reftoken} and \eqref{eq:nlp_maxfluct} specify
 the representation of the reference token and enforce a maximum fluctuation of exchange rates on
 all token pairs.
-\FH{\eqref{eq:nlp_maxfluct} will not scale well with the number of tokens (i.e.\ $\mathcal O(N^2)$) and is not really necessary, as explained above.}
+\FH{\eqref{eq:nlp_maxfluct} will not scale well with the number of tokens (i.e.\ $\mathcal O(n^2)$) and is not really necessary, as explained above.}
 
 Finally, the limits in terms of token amounts to be bought/sold in a limit order are incorporated
 into the model via the constraints \eqref{eq:nlp_tokenamount_1}--\eqref{eq:nlp_tokenamount_4}.
