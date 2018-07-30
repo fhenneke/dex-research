@@ -84,6 +84,9 @@
 \newtheorem{lemma}[theorem]{Lemma}
 \newtheorem{observation}[theorem]{Observation}
 
+% comments
+\newcommand{\FH}[1]{\textcolor{magenta}{[FH:#1]}}
+
 %%%%%%%%%%%%%%
 %% DOCUMENT %%
 %%%%%%%%%%%%%%
@@ -131,7 +134,7 @@ there exists an exchange rate that satisfies the limit prices stated in the resp
 In a setting of multiple tradeable tokens, one separate order book is required for every token pair
 combination.
 This may significantly limit liquidity for less frequently traded token pairs and lead to large
-bid-ask spreads and low trading volumes.
+bid-ask spreads and low trading volumes. \FH{Can this be verified for realistic trading orders? By how much does liquidity increase? If this is the main selling point, it should be show in more detail.}
 
 In our approach, we want to collect orders for a set of multiple tokens in a single joint order
 book and compute exchange prices for all token pairs simultaneously at the end of discrete time
@@ -150,8 +153,8 @@ to be satisfied for the prices of all tokens j,k,l.
 
 The concept of frequent batch auctions aiming at reducing arbitrage and improving liquidity has
 been investigated extensively in \cite{budish:HFT}.
-Moreover, the advantages of uniform-price clearing have been discussed in 
-\cite{engelbrecht:multi_unit_auctions}.
+Moreover, the advantages of uniform-price clearing have been discussed in
+\cite{engelbrecht:multi_unit_auctions}. \FH{this paper seems to study a discrete auction where bidders can have two bids. probably discusses price manipulations and their mitigation}
 In this document, we want to describe the problem of determining uniform clearing prices for all
 pairs of tokens involved in a multi-token batch auction process, and present a mixed-integer
 programming (MIP) solution approach.
@@ -166,8 +169,8 @@ programming (MIP) solution approach.
 
 Let $ \tokens := \{ \tau_1 \ldots \tau_n \} $ denote the set of the $ n $ tokens that we want to
 consider.
-Additionally, we introduce an artificial token~$ \tau_0 $ that shall be referred to as 
-\emph{reference token}, which will become important in our modelling approaches later on in 
+Additionally, we introduce an artificial token~$ \tau_0 $ that shall be referred to as
+\emph{reference token}, which will become important in our modelling approaches later on in
 \secref{sec:models}.
 For convenience of notation, we use $ \mathcal{I}^t := \{ 1 \ldots n \} $ to denote the indices
 of our token set.
@@ -205,6 +208,7 @@ Analogously, every sell order is represented by a tuple $ (j,k,\overline{y},\pi)
 The semantics of the two order types are somewhat similar in that there is one token to be
 exchanged against another, if a certain limit price is guaranteed.
 Such orders are hence referred to as \emph{limit orders}.
+\FH{Why not use one type of order with limits on both tokens? Then setting one limit to infinity will result in one of the orders outlined above.}
 The difference between buy and sell orders is the following:
 \begin{itemize}
   \item In a buy order, a fixed (maximum) buy volume $ \overline{x} $ is set, so the buyer
@@ -227,6 +231,7 @@ than $ \overline{x} $ tokens $ \tau_j $ for a maximum of $ \pi \cdot \overline{x
 $ \tau_k $, \ie if the exchange rate $ p_{j|k} $ is lower than $ \pi $.
 Hence, the buy order could be translated into an equivalent sell order
 $ (k,j,\pi \cdot \overline{x},\pi) $.
+\FH{If I want to buy one plane ticket and would be willing to pay \$100, then the plane ticket being only \$50 will not make me buy two of them!?}
 In this paper, however, we will continue to treat the different order types separately.
 
 
@@ -240,6 +245,7 @@ Therefore, the following optimization criteria could be used:
   \item maximize the amount of trade that is enabled (\wrt some reference token)
   \item maximize \emph{trader welfare}, \eg defined as difference of paid price vs. limit price
 \end{itemize}
+\FH{Are those the only criteria? How can those \emph{soft} constaints lead to \emph{hard} qualitative properties of the trade?}
 
 
 \subsection{Constraints}
@@ -267,6 +273,8 @@ high level as follows:
   for all token triples $ (\tau_j,\tau_k,\tau_l) $: $ p_{j|k} \cdot p_{k|l} = p_{j|l} $.
 \end{itemize}
 
+\FH{the properties above seem to be qualitatively different. some are strictly necessary for any trading system, some are nice-to-have properties of this particular system. what are other nice-to-have properties? how can robustness with respect to price manipulations be encoded as abstract property?}
+
 \vspace{.6cm}
 \begin{lemma}
   (arbitrage freeness) $ \Rightarrow $ (price coherence).
@@ -279,7 +287,7 @@ high level as follows:
     \item[(i)] $ p_{j|k} \cdot p_{k|l} = p_{j|l} $
     \item[(ii)] $ p_{j|l} \cdot p_{l|k} = p_{j|k} $
   \end{itemize}
-  Inserting (i) into (ii) and assuming prices to be strictly positive yields
+  Inserting (i) into (ii) and assuming prices to be strictly positive \FH{which other implicit assumptions are there? (would it herew suffice to assume that not \emph{all} of the prices are zero?) what about negative prices?)} yields
   \begin{align*}
     p_{j|k} \cdot p_{k|l} \cdot p_{l|k} = p_{j|k}
     \qquad \Leftrightarrow \qquad
@@ -299,26 +307,27 @@ Here is a list of research questions that we would like to answer.
 \begin{itemize}
   \item In an optimal solution, is it guaranteed that orders can always be fully executed if their
   limit prices are strictly higher (buy order) or lower (sell order) than the exchange rate between
-  the respective token pair?
+  the respective token pair? \FH{does the trading limits not play a role here also?}
   If true, we would only need to resort to partially executing orders if the execution price is
-  equal to the limit price.
-  \item What is the impact of optimizing the trading volume vs. the traders' welfare?
+  equal to the limit price. \FH{why?}
+  \item What is the impact of optimizing the trading volume vs. the traders' welfare? \FH{good question. to satisfactorily answer it one should define better qualitative/quantitative criteria for the quality of a trading system.}
 \end{itemize}
 
 
 \subsection{Example}
 \label{subsec:example}
 
-A typical instance of our batch auction problem could look like shown in 
+A typical instance of our batch auction problem could look like shown in
 \figref{fig:order-token-graph}.
 It is assumed that some token pairs will encounter high trading demand whereas other will only
 rarely be traded on.
+\FH{Can this figure be used to explain the increase in liquidity? Why is the number of orders used and not the volume? How can ring structure be visualized in this graph without ordered edges?}
 
 \begin{figure}[h!]
   \centering
   \includegraphics[width=.82\textwidth]{figures/token_order_graph.png}
   \caption{Token-order-graph representing a multi-token batch auction instance. Nodes correspond
-  to tokens (with their size indicating the trading demand), the thickness of an edge represents 
+  to tokens (with their size indicating the trading demand), the thickness of an edge represents
   the number of orders placed on the respective token pair.}
   \label{fig:order-token-graph}
 \end{figure}
@@ -339,8 +348,9 @@ This may result in unnecessary limitations to the problem size that is tractable
 numerical instability.
 However, we can do better by not considering all pairwise token rates explicitely but representing
 all token prices only with respect to a single reference token $ \tau_0 $.
-Let $ p_j := p_{j|0} $ denote the price of token $ \tau_j $ expressed in units of token $ \tau_0 $ 
+Let $ p_j := p_{j|0} $ denote the price of token $ \tau_j $ expressed in units of token $ \tau_0 $
 (hence, $ p_0 = 1 $).
+\FH{How can one make sure this is well-defined? Why would there be a price for $j$ in units of $0$? Is it not part of the problem to show that prices with nice properties exist?}
 Applying the arbitrage-freeness and price-coherence conditions directly, we can express the
 exchange rate between two tokens $ \tau_j $ and $ \tau_k $ as
 \begin{align}
@@ -354,6 +364,7 @@ For example, we could select one particular $ \tau_j \in \tokens $ to be the ref
   p_0 &= p_j.
   \label{eq:refToken_1}
 \end{align}
+\FH{i.e.\ $p_j = 1$?}
 Then, all trading volume would be computed \wrt $ \tau_j $ (which we will explain later in the
 model formulation sections), making this the principal token in the batch auction.
 Alternatively and more generally, we could also identify $ \tau_0 $ with a weighted sum of all
@@ -363,18 +374,20 @@ participating tokens in $ \tokens $, \ie
   \label{eq:refToken_2}
 \end{align}
 with weights $ \gamma_j > 0 $.
+\FH{i.e.\ $1 = \sum\limits_{j \in \itokens} \gamma_j \cdot p_j$? what does this mean? why is this possible?}
 This way, it would be possible to give similar importance to all tokens.
 \end{subequations}
 
 \vspace{.2cm}
 \begin{observation}
 The choice of representation of the reference token has an influence on the solution.
-This can be seen by considering a single token pair $ (\tau_i,\tau_j) $ with only two buy orders
+This can be seen by considering a single token pair $ (\tau_i,\tau_j) $ \FH{$(\tau_k, \tau_j)$?} with only two buy orders
 $ \omega_1 = (j,k,1.0,2.0) $ and $ \omega_2 = (k,j,1.5,1.0) $.
 Both orders can be matched if $ p_{j|k} \in [1,2] $.
 However, if we choose token $ \tau_j $ to be the reference token, a maximum of $ 1.0 \> \tau_j $
 can be transacted for prices $ p_{j|k} \in [1,1.5] $, whereas the maximum trading volume of
 $ 1.5 \> \tau_k $ can be achieved when $ p_{j|k} \in [1.5,2] $.
+\FH{But the price intervals both contain $1.5$. Is there an example, where the intervals have empty intersection? If the intersection always is nonempty, is there a systematic way to find this price?}
 \end{observation}
 
 
@@ -430,16 +443,22 @@ We represent all token prices in a vector $ \mathbf{p} \in \mathbb{R}^n_{\ge 0} 
 denotes the price of token $ \tau_j $ \wrt the reference token $ \tau_0 $.
 It is helpful to incorporate some explicit lower and upper bound for the price of every token~
 $ \tau_j $, so let us require $ p_j \in [\underline{p}_j,\overline{p}_j] $.
+\FH{Why is it helpful? Efficiency of the optimization? Theoretical properties of the solution? Existence of solutions?}
 For example, with $ p_0 = 1 $, one can derive an obvious upper bound from \eqref{eq:refToken_2} as
 $ p_j \le 1/\gamma_j $.
+\FH{Is this bound automatically satisfied in the optimization approach? Or does one have to include it explicitly?}
 In our case, we use a maximum fluctuation parameter $ \delta \ge 0 $ to bound the deviation of the
 computed exchange rates from the previous ones.
 In particular, let $ p^\mathrm{old}_j $ be the price of token $ \tau_j $ found in the previous
 batch auction iteration.
-We then use weights $ \gamma_j = 1 / (n \cdot p^\mathrm{old}_j) $ and require
+We then use weights $ \gamma_j = 1 / (n \cdot p^\mathrm{old}_j) $ \FH{why use this expression? $n$ could be superfluous. dependence on $p^\mathrm{old}_j$ to keep \emph{value} of reference coin stable?} and require
 $ p_j \in [(\frac{1} {1+\delta}) \> p^\mathrm{old}_j, (1+\delta) \> p^\mathrm{old}_j] $
 for all tokens $ \tau_j \in \tokens $.
-In order to guarantee the same maximum fluctuation on all token pairs $ (\tau_j,\tau_k) $,
+In order to guarantee the same maximum fluctuation on all token pairs $ (\tau_j,\tau_k) $, \FH{Without those additional constraints one should get the bounds $(1 + \delta)^2$ and $\frac{1}{(1 + \delta)^2}$ via e.g.
+\[
+  p_{j|k} = p_j p_k^{-1} \leq (1 + \delta) p^\mathrm{old}_j ((1 + \delta)^{-1} p^\mathrm{old}_k)^{-1} = (1 + \delta)^2 p^\mathrm{old}_{j|k}.
+\]
+Why is it important to get rid of the squaring?}
 we further add the conditions
 \begin{align}
   p_{j|k} \in
@@ -555,14 +574,17 @@ model.
 As described earlier, the constraints \eqref{eq:nlp_reftoken} and \eqref{eq:nlp_maxfluct} specify
 the representation of the reference token and enforce a maximum fluctuation of exchange rates on
 all token pairs.
+\FH{\eqref{eq:nlp_maxfluct} will not scale well with the number of tokens (i.e.\ $\mathcal O(N^2)$) and is not really necessary, as explained above.}
 
 Finally, the limits in terms of token amounts to be bought/sold in a limit order are incorporated
 into the model via the constraints \eqref{eq:nlp_tokenamount_1}--\eqref{eq:nlp_tokenamount_4}.
+\FH{\eqref{eq:nlp_tokenamount_2} and \eqref{eq:nlp_tokenamount_4} are essential to ensure the (buy/sell limit price) condition.}
 
 One major weakness of the model is the fact that orders can be left unexecuted even if the computed
 token prices satisfy the given limit price.
 We believe that this can only be cured with the introduction of binary variables that indicate
 whether prices allow for an order to be executed, or not.
+\FH{What are the precise criteria the trading mechanism should satisfy?}
 
 
 \subsection{Mixed-integer linear programming model I}
@@ -570,6 +592,7 @@ whether prices allow for an order to be executed, or not.
 
 As an alternative to the NLP model presented above, we are now going to propose a
 mixed-integer linear programming (MIP) formulation.
+\FH{Why does the nonlinearity vanish?}
 
 \subsubsection*{Variables}
 
@@ -706,7 +729,7 @@ current purposes set $ \overline{r} = 1 $.
 The objective function \eqref{eq:mip1_objective} maximizes the total volume in terms of units of
 the reference token $ \tau_0 $ that is processed with all orders.
 
-Constraint \eqref{eq:mip1_tokenbalance} secures that the total buy and sell volumes across all 
+Constraint \eqref{eq:mip1_tokenbalance} secures that the total buy and sell volumes across all
 orders must be equal for every token.
 With uniform clearing prices, volume balance implies token balance.
 
@@ -720,7 +743,7 @@ Note that the summations in the constraints are only needed to ensure that the r
 selected from the respective variable vector.
 
 Similarly as above, the constraints \eqref{eq:mip1_bounds_buyprice_1} and
-\eqref{eq:mip1_bounds_sellprice_1} control the auxiliary variables in $ \mathbf{p}^{b,1} $ and $ 
+\eqref{eq:mip1_bounds_sellprice_1} control the auxiliary variables in $ \mathbf{p}^{b,1} $ and $
 \mathbf{p}^{s,1} $ for the case that an order $ \omega_i $ is executed ($ z_i = 1 $).
 
 The relation between the auxiliary price variables and the actual token prices is established by
@@ -843,7 +866,7 @@ From here on, we are only working with this aggregated order representation.
 \subsubsection*{Variables}
 
 We will use the same price variables $ \mathbf{p} \in \mathbb{R}^n_{\ge 0} $ as previously.
-In addition, we will use variables $ (v_{j,k}^\mathrm{abs}) =: \mathbf{v}^\mathrm{abs} \in 
+In addition, we will use variables $ (v_{j,k}^\mathrm{abs}) =: \mathbf{v}^\mathrm{abs} \in
 \mathbb{R}_{\ge 0}^{\mid \itokenpairs \mid} $ and
 $ (v_{j,k}^\mathrm{net}) =: \mathbf{v}^\mathrm{net} \in \mathbb{R}_{\ge 0}^{\mid \itokenpairs \mid}
 $ to represent the total absolute and net volume (in terms of units of token $ \tau_0 $) that is
@@ -853,7 +876,7 @@ $ l \in \mathcal{I}_{j,k}^r $, we introduce a binary variable $ z_{j,k,l} \in \{
 indicates whether the exchange rate $ p_{j|k} = \frac{p_j}{p_k} $ lies within the interval $ r_l $
 or not.
 Let $ \mathbf{z} := (z_{j,k,l}) $.
-In order for the disjunctive MIP formulation to work, we again need a set of auxiliary 
+In order for the disjunctive MIP formulation to work, we again need a set of auxiliary
 (disaggregated) variables.
 Let $ \mathbf{v}^b := (v^b_{j,k,l}) $ and $ \mathbf{v}^s := (v^s_{j,k,l}) $ represent the volumes
 that are traded in buy and sell orders, respectively, for every token pair and every exchange rate
@@ -996,7 +1019,7 @@ A main feature of disjunctive programming is that the auxiliary variables belong
 the disjunction are set to zero if that part is not selected to be active, and that they take
 some meaningful value otherwise.
 This is expressed by the constraints \eqref{eq:mip2_price1_lb}--\eqref{eq:mip2_sellvolume_ub}.
-Thereby, the main dependency between the binary and the auxiliary variables is given in 
+Thereby, the main dependency between the binary and the auxiliary variables is given in
 \eqref{eq:mip2_price2_lb} and \eqref{eq:mip2_price2_ub}, where auxiliary prices on some disjunction
 part are either set to zero or are restricted to be within (non-negative) bounds.
 If they are set to zero, it is implied that all auxiliary variables for the same part are also set
@@ -1009,7 +1032,7 @@ the model, which are similar to the previous MIP model \eqref{eq:mip1}.
 \subsection{Mixed-integer linear programming model III}
 \label{subsec:MIPmodel_3}
 
-In \ref{subsec:MIPmodel_2}, we consider aggregated orders on directed token pairs, so the pair $ 
+In \ref{subsec:MIPmodel_2}, we consider aggregated orders on directed token pairs, so the pair $
 (\tau_i,\tau_j) $ exists as well as $ (\tau_j,\tau_i) $.
 However, we can also aggregate further and build yet another MIP model by only considering
 undirected token pairs $ \{\tau_i,\tau_j\} $.
@@ -1167,7 +1190,7 @@ of execution for all orders with limit prices complying to the computed exchange
 \label{subsec:computational_comparison}
 
 In order to investigate the performance of our MIP models, we have conducted computational
-experiments for different numbers of tokens ($ n \in \{5,10,20,50\} $) and orders ($ N \in 
+experiments for different numbers of tokens ($ n \in \{5,10,20,50\} $) and orders ($ N \in
 \{100,200,500\} $).
 For every combination of $ n $ and $ N $, we have generated 20 random instances, whereby the
 randomness reflects our expectation of somewhat realistic situations.
