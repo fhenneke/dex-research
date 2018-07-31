@@ -48,13 +48,12 @@ end
 @constraint(m, sum(p[i] * gamma[i] for i in 1:n) == 1)
 
 # solve
-solve(m);
+@time status = solve(m);
 
 println("x = ", getvalue(x))
 println("y = ", getvalue(y))
 println("p = ", getvalue(p))
 println("v = ", getvalue(v))
-getvalue(p)[1]
 
 # %% example 2: ring trade
 # data
@@ -112,7 +111,7 @@ end
 @constraint(m, sum(p[i] * gamma[i] for i in 1:n) == 1)
 
 # solve
-solve(m)
+@time status = solve(m)
 
 println("x = ", getvalue(x))
 println("y = ", getvalue(y))
