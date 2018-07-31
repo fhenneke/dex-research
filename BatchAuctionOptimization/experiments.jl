@@ -124,7 +124,7 @@ println("v = ", getvalue(v))
 # %% example 3, more orders
 # data
 # TODO: start from orders and not from the final data representation
-n = 20
+n = 40
 N = 500
 
 t_b = Int[]
@@ -142,47 +142,47 @@ end
 find_t_b = [find(x -> x == i, t_b) for i in 1:n]
 find_t_s = [find(x -> x == i, t_s) for i in 1:n]
 
+# x_bar = ones(N)
+# y_bar = ones(N)
 x_bar = 0.1 + rand(N)
+y_bar = 0.3 + rand(N)
 # y_bar = [Inf, Inf, Inf] # not supported atm
 
+# p_bar = ones(N)
 p_bar = 0.1 + rand(N) # the name p_bar is used instead of pi
 
-gamma = 1 / n * ones(n)
+gamma = 1 / n * ones(n);
 
-# JuMP model
+# %% JuMP model
 m = Model(solver = IpoptSolver())
-@variable(m, v[1:N] >= 0, start = 0.5)
-@variable(m, x[1:N] >= 0, start = 0.5)
-@variable(m, y[1:N] >= 0, start = 0.5)
-@variable(m, p[1:n] >= 0, start = 0.5)
+# m = Model(solver = SCIPSolver())
+@variable(m, v[1:N] >= 0, start = 0.0)
+@variable(m, p[1:n] >= 0, start = 1.0)
 
 @objective(m, Max, sum(v))
 
-@constraint(m, sum(x[i] for i in find_t_b[1]) == sum(y[i] for i in find_t_s[1]))
-@constraint(m, sum(x[i] for i in find_t_b[2]) == sum(y[i] for i in find_t_s[2]))
-
-for i in 1:N
-    @NLconstraint(m, v[i] == x[i] * p[t_b[i]])
-    @NLconstraint(m, v[i] == y[i] * p[t_s[i]])
+for j in 1:n
+    @constraint(m, sum(v[i] for i in find_t_b[j]) == sum(v[i] for i in find_t_s[j]))
 end
 
-@constraint(m, x .<= x_bar)
-# @constraint(m, y .<= y_bar) # does not work like this
+for i in 1:N
+    @NLconstraint(m, v[i] * p[t_b[i]] <= v[i] * p[t_s[i]] * p_bar[i])
+    @constraint(m, v[i] <= p[t_b[i]] * x_bar[i])
+    @constraint(m, v[i] <= p[t_s[i]] * y_bar[i])
+end
 
-@constraint(m, y .<= x .* p_bar)
 
 @constraint(m, sum(p[i] * gamma[i] for i in 1:n) == 1)
 
 # solve
-@time solve(m)
+@time status = solve(m)
 
-println("x = ", getvalue(x))
-println("y = ", getvalue(y))
 println("p = ", getvalue(p))
 println("v = ", getvalue(v))
+sum(getvalue(v))
 
 # %% visualization
-using Plots, PlotRecipes, LightGraphs, GraphPlot
+using Plots, LightGraphs, GraphPlot
 
 g = DiGraph(n)
 for i = 1:N
@@ -193,7 +193,7 @@ end
 
 A = zeros(n, n)
 for i=1:N
-    A[t_b[i],t_s[i]] += getvalue(v)[i]
+    A[t_s[i],t_b[i]] += getvalue(v)[i]
 end
 
 p1 = gplot(g, nodelabel=1:n, nodesize=vec(sum(A, 2)) + vec(sum(A, 1)), layout=circular_layout);
