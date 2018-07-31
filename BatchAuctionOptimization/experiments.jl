@@ -88,15 +88,17 @@ gamma = 1 / n * ones(n)
 
 # JuMP model
 m = Model(solver = IpoptSolver())
-@variable(m, v[1:N] >= 0, start = 1.0)
-@variable(m, x[1:N] >= 0, start = 1.0)
-@variable(m, y[1:N] >= 0, start = 1.0)
+# m = Model(solver = SCIPSolver())
+@variable(m, v[1:N] >= 0, start = 0.5)
+@variable(m, x[1:N] >= 0, start = 0.5)
+@variable(m, y[1:N] >= 0, start = 0.5)
 @variable(m, p[1:n] >= 0, start = 1.0)
 
 @objective(m, Max, sum(v))
 
-@constraint(m, sum(x[i] for i in find_t_b[1]) == sum(y[i] for i in find_t_s[1]))
-@constraint(m, sum(x[i] for i in find_t_b[2]) == sum(y[i] for i in find_t_s[2]))
+for j in 1:n
+    @constraint(m, sum(x[i] for i in find_t_b[j]) == sum(y[i] for i in find_t_s[j]))
+end
 
 for i in 1:N
     @NLconstraint(m, v[i] == x[i] * p[t_b[i]])
