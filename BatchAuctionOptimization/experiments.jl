@@ -1,7 +1,7 @@
 # %% some experiments using JuMP
 
 using JuMP
-using Ipopt
+using Ipopt, SCIP
 
 # %% example 1 from p. 7 of the manuscript
 # data
@@ -23,7 +23,8 @@ p_bar = [2.0, 1.0] # the name p_bar is used instead of pi
 gamma = [0.5, 0.5]
 
 # JuMP model
-m = Model(solver = IpoptSolver())
+# m = Model(solver = IpoptSolver())
+m = Model(solver = SCIPSolver())
 @variable(m, v[1:N] >= 0, start = 1.0)
 @variable(m, x[1:N] >= 0, start = 1.0)
 @variable(m, y[1:N] >= 0, start = 1.0)
