@@ -1,7 +1,46 @@
 # %% some experiments using JuMP
 
 using JuMP
-using Ipopt, SCIP
+using Ipopt, SCIP, Clp, Cbc
+
+function setup_nl_problem!(m, n, N, t_b, t_s, x_bar, y_bar, p_bar, p_old, delta, gamma, v_init, p_init)
+    @variable(m, v[i=1:N] >= 0, start = v_init[i])
+    @variable(m, 1 / (1 + delta) * p_old[i] <= p[i=1:n] <= (1 + delta) * p_old[i], start = p_init[i])
+
+    @objective(m, Max, sum(v))
+
+    for j in 1:n
+        @constraint(m, sum(v[i] for i in find_t_b[j]) == sum(v[i] for i in find_t_s[j]))
+    end
+
+    for i in 1:N
+        @NLconstraint(m, v[i] * p[t_b[i]] <= v[i] * p[t_s[i]] * p_bar[i])
+        @constraint(m, v[i] <= p[t_b[i]] * x_bar[i])
+        @constraint(m, v[i] <= p[t_s[i]] * y_bar[i])
+    end
+
+    @constraint(m, sum(p[i] * gamma[i] for i in 1:n) == 1)
+
+    return m
+end
+
+function setup_l_problem!(m, n, N, t_b, t_s, x_bar, y_bar, p_bar, gamma, v_init, p_init)
+    @variable(m, v[i=1:N] >= 0, start = v_init[i])
+
+    @objective(m, Max, sum(v))
+
+    for j in 1:n
+        @constraint(m, sum(v[i] for i in find_t_b[j]) == sum(v[i] for i in find_t_s[j]))
+    end
+
+    for i in 1:N
+        @constraint(m, v[i] * p_init[t_b[i]] <= v[i] * p_init[t_s[i]] * p_bar[i])
+        @constraint(m, v[i] <= p_init[t_b[i]] * x_bar[i])
+        @constraint(m, v[i] <= p_init[t_s[i]] * y_bar[i])
+    end
+
+    return m
+end
 
 # %% example 1 from p. 7 of the manuscript
 # data
@@ -16,48 +55,26 @@ find_t_b = [find(x -> x == i, t_b) for i in 1:n]
 find_t_s = [find(x -> x == i, t_s) for i in 1:n]
 
 x_bar = [1.0, 1.5]
-# y_bar = [Inf, Inf, Inf] # not supported atm
+y_bar = [100, 100] # Inf not supported atm
 
 p_bar = [2.0, 1.0] # the name p_bar is used instead of pi
 
 gamma = [0.5, 0.5]
 
 # JuMP model
-# m = Model(solver = IpoptSolver())
-m = Model(solver = SCIPSolver())
-@variable(m, v[1:N] >= 0, start = 1.0)
-@variable(m, x[1:N] >= 0, start = 1.0)
-@variable(m, y[1:N] >= 0, start = 1.0)
-@variable(m, p[1:n] >= 0, start = 1.0)
-
-@objective(m, Max, sum(v))
-
-@constraint(m, sum(x[i] for i in find_t_b[1]) == sum(y[i] for i in find_t_s[1]))
-@constraint(m, sum(x[i] for i in find_t_b[2]) == sum(y[i] for i in find_t_s[2]))
-
-for i in 1:N
-    @NLconstraint(m, v[i] == x[i] * p[t_b[i]])
-    @NLconstraint(m, v[i] == y[i] * p[t_s[i]])
-end
-
-@constraint(m, x .<= x_bar)
-# @constraint(m, y .<= y_bar) # does not work like this
-
-@constraint(m, y .<= x .* p_bar)
-
-@constraint(m, sum(p[i] * gamma[i] for i in 1:n) == 1)
+m = Model(solver = IpoptSolver())
+# m = Model(solver = SCIPSolver())
+setup_problem!(m, n, N, t_b, t_s, x_bar, y_bar, p_bar, ones(n), 1, gamma, ones(N), ones(n))
 
 # solve
 @time status = solve(m);
 
-println("x = ", getvalue(x))
-println("y = ", getvalue(y))
-println("p = ", getvalue(p))
-println("v = ", getvalue(v))
+println("p = ", getvalue(m[:p]))
+println("v = ", getvalue(m[:v]))
 
 # %% example 2: ring trade
 # data
-# TODO: start from orders and not from the final data representation
+# TODO: also use function syntax?
 n = 3
 N = 3
 
