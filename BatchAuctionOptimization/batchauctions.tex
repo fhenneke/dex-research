@@ -611,12 +611,14 @@ In order to model this disjoint behaviour, we make use of a \emph{disjunctive pr
 formulation that requires the auxiliary non-negative price variable vectors
 $ \mathbf{p}^{b,0}, \mathbf{p}^{b,1}, \mathbf{p}^{s,0}, \mathbf{p}^{s,1} \in \mathbb{R}^N_{\ge 0}
 $.
+\FH{seems to be an standard trick to go from bilinear to mixed integer linear}
 
 \subsubsection*{Parameters}
 
 The model allows for setting a minimum and maximum fraction of execution for every order.
 For now, we will use global values $ 0 \le \underline{r} \le \overline{r} \le 1 $ and for all
 current purposes set $ \overline{r} = 1 $.
+\FH{How could $\underline{r} > 0$ ever work in general? If some order has a large $\overbar{x}$ the total trading volume might not be enough to satisfy the constraint!}
 
 \subsubsection*{Model}
 \begin{small}
@@ -725,6 +727,8 @@ current purposes set $ \overline{r} = 1 $.
 \label{eq:mip1}
 \end{subequations}
 \end{small}
+
+\FH{Some of the tricks here can be used to reduce the variables in the nonlinear problem from $x$, $y$, $v$, $p$ to $v$, $p$. It should be possible to implement some form of fractional execution as post-processing.}
 
 The objective function \eqref{eq:mip1_objective} maximizes the total volume in terms of units of
 the reference token $ \tau_0 $ that is processed with all orders.
