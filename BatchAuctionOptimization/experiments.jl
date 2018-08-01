@@ -58,13 +58,15 @@ x_bar = [1.0, 1.5]
 y_bar = [100, 100] # Inf not supported atm
 
 p_bar = [2.0, 1.0] # the name p_bar is used instead of pi
+p_old = [1.0, 1.0]
+delta = 1.0
 
 gamma = [0.5, 0.5]
 
 # JuMP model
-m = Model(solver = IpoptSolver())
+m = Model(solver = IpoptSolver(print_level=0))
 # m = Model(solver = SCIPSolver())
-setup_problem!(m, n, N, t_b, t_s, x_bar, y_bar, p_bar, ones(n), 1, gamma, ones(N), ones(n))
+setup_nl_problem!(m, n, N, t_b, t_s, x_bar, y_bar, p_bar,p_old, delta, gamma, ones(N), ones(n))
 
 # solve
 @time status = solve(m);
@@ -104,7 +106,7 @@ p_bar = [1.0, 1.0, 1.0] # the name p_bar is used instead of pi
 gamma = 1 / n * ones(n)
 
 # JuMP model
-m = Model(solver = IpoptSolver())
+m = Model(solver = IpoptSolver(print_level=0))
 # m = Model(solver = SCIPSolver())
 @variable(m, v[1:N] >= 0, start = 0.5)
 @variable(m, x[1:N] >= 0, start = 0.5)
