@@ -24,3 +24,15 @@ todo
 - the first formulation might be linear!!?? at least that is how it seems after applying the same tricks as done for the MIP formulations
   - NO! as it turns out, the nonlinearity might be necessary after all. limit prices should only be enforced for some of the orders!
   - BUT: by multiplying the incerrect contraint by v one recovers a wellposed problem with severely reduced dimensionality
+
+## 2018-08-01
+
+- read some stuff in the direction of parametrized linear problems
+  - after fixing prices, the problem is fully linear
+  - prices enter only in the form of linear coefficients
+  - is there something to be gained here in terms of efficiency?
+- looks like multiparametric linear programming does not really help here
+- standard approach is to reformulate the bilinear constraints using integer variables to a MIP, as done in the paper. see [https://math.stackexchange.com/questions/1361014/bilinear-constraint]()
+- solution of the nonlinear problem depends strongly on the initial solution
+  - bug?
+  - should the solution of the linear solve be postprocessed in some way?
