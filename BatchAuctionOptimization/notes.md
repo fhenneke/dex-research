@@ -36,3 +36,16 @@ todo
 - solution of the nonlinear problem depends strongly on the initial solution
   - bug?
   - should the solution of the linear solve be postprocessed in some way?
+
+## 2018-08-02
+
+- I should keep in mind, that my timing are on a weaker machine (i5-4200U CPU @ 1.60GHz (2 cores) vs i7-8550U CPU @ 1.80GHz (4 cores))
+  - not sure how much faster their laptop actually is
+  - is this approach scalable? will it help to be on a better machine? what are realistic numbers of tokens and orders?
+- i could try postprocessing in each step after the linear solve, this might make the problem better behaved
+  - but the nonlinear formulation seems to be rather strangely behaved. the switching of some of the conditions seems to be close to discrete. the nonlinear formulation might not be wellposed, or at the least might not satisfy constraint qualifications
+- testing the nonlinear solutions agains solutions of MIP should be instructive
+  - in preliminary test the mip leads to better solutions but takes a lot longer
+    - for n = 10, N = 100 it takes 90s, compared to the reported 0.32s in the manuscript. so Gurobi is a lot faster or i missed some code optimizations or the realistic workload produces simpler problems
+- there must be some way to exploit that the problem only contains few *difficult* variables (p) and for fixed p becomes a linear problem!
+  - iterative approach seems to get stuck. maybe the mip formulation is as effecient as it gets? (up to monotonie in z etc.)
