@@ -42,7 +42,7 @@ function setup_lp!(m, n, N, t_b, t_s, x_bar, y_bar, p_bar, gamma, v_init, p_init
     return m
 end
 
-function setup_lp_iter!(m, n, N, t_b, t_s, x_bar, y_bar, p_bar, p_min, p_max, gamma, v_init, p_init, epsilon)
+function setup_lp_iter!(m, n, N, t_b, t_s, x_bar, y_bar, p_bar, p_min, p_max, gamma, v_init, p_init)
     find_t_b = [find(t_b .== j) for j in 1:n]
     find_t_s = [find(t_s .== j) for j in 1:n]
 
@@ -56,7 +56,7 @@ function setup_lp_iter!(m, n, N, t_b, t_s, x_bar, y_bar, p_bar, p_min, p_max, ga
     end
 
     for i in 1:N
-        @constraint(m, p[t_b[i]] <= p[t_s[i]] * p_bar[i] + epsilon)
+        @constraint(m, p[t_b[i]] <= p[t_s[i]] * p_bar[i])
         @constraint(m, v[i] <= p[t_b[i]] * x_bar[i])
         @constraint(m, v[i] <= p[t_s[i]] * y_bar[i])
     end
@@ -290,15 +290,13 @@ p_min = 1 / (1 + delta) * p_old
 p_init = p_old
 v_init = zeros(N)
 
-epsilon = 0e-5
-
 trade_possible = p_init[t_b] .<= p_bar .* p_init[t_s]
 
-K = 5
+K = 20
 for k in 1:K
     println("k = ", k)
     # @assert all(trade_possible .<= (p_init[t_b] .<= p_bar .* p_init[t_s] + 1e-10))
-    if k % 5 == 0
+    if trade_possible == (p_init[t_b] .<= p_bar .* p_init[t_s] + 1e-15)
         trade_possible = p_init[t_b] .<= p_bar .* p_init[t_s] - 1e-15
     else
         trade_possible = p_init[t_b] .<= p_bar .* p_init[t_s] + 1e-15
@@ -308,20 +306,25 @@ for k in 1:K
 
     # m_iter = Model(solver = IpoptSolver(print_level=0))
     # potentially choose a different/more efficient linear solver here
-    m_iter = Model(solver = ClpSolver())
+    # m_iter = Model(solver = ClpSolver())
     # m_iter = Model(solver = CbcSolver())
-    # m_iter = Model(solver = SCIPSolver("display/verblevel", 0))
-    setup_lp_iter!(m_iter, n, sum(trade_possible), t_b[trade_possible], t_s[trade_possible], x_bar[trade_possible], y_bar[trade_possible], p_bar[trade_possible], p_min, p_max, gamma, v_init[trade_possible], p_init, epsilon)
+    m_iter = Model(solver = SCIPSolver("display/verblevel", 0))
+    setup_lp_iter!(m_iter, n, sum(trade_possible), t_b[trade_possible], t_s[trade_possible], x_bar[trade_possible], y_bar[trade_possible], p_bar[trade_possible], p_min, p_max, gamma, v_init[trade_possible], p_init)
     status_iter = solve(m_iter)
 
-    @show map(size, [n, sum(trade_possible), t_b[trade_possible], t_s[trade_possible], x_bar[trade_possible], y_bar[trade_possible], p_bar[trade_possible], p_min, p_max, gamma, v_init[trade_possible], p_init, epsilon])
-
     p_init = getvalue(m_iter[:p])
-    v_init = zeros(N)
-    v_init[trade_possible] .= getvalue(m_iter[:v])
+    # v_init = zeros(N)
+    # v_init[trade_possible] .= getvalue(m_iter[:v])
 
     println("total trading volume: ", sum(getvalue(m_iter[:v])), "\n")
 end
+
+
+getvalue(m_iter[:p])[t_b] .<= p_bar .* getvalue(m_iter[:p])[t_s]
+getvalue(m_mip[:P])[t_b] .<= p_bar .* getvalue(m_mip[:P])[t_s]
+
+getvalue(m_iter[:p]) ./ p_old
+p_init = getvalue(m_mip[:P]) ./ p_old
 
 
 # getvalue(m_iter[:p]) ./ p_old
@@ -349,8 +352,8 @@ setup_mip!(m_mip, n, N, t_b, t_s, x_bar, y_bar, p_bar, p_old, p_max, p_min, gamm
 sum(getvalue(m_mip[:v]))
 find(.!(trade_possible .<= (p_init[t_b] .<= p_bar .* p_init[t_s])))
 
-p_old[t_b[96]], p_bar[96] .* p_old[t_s[96]]
-p_init[t_b[96]], p_bar[96] .* p_init[t_s[96]]
+getvalue(m_mip[:P]) ./ p_old
+
 
 # %% two stage formulation
 v_init = zeros(N)
