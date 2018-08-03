@@ -374,6 +374,8 @@ setup_mip!(m_mip, n, N, t_b, t_s, x_bar, y_bar, p_bar, p_old, p_max, p_min, gamm
 
 @time status = solve(m_mip)
 
+sum(getvalue(m_mip[:v]))
+
 m_mip2 = Model(solver = GurobiSolver())
 
 m_mip2 = setup_mip2!(m_mip2, n, N, t_b, t_s, x_bar, y_bar, p_bar, p_min, p_max, gamma, v_init, p_init, z_init)
@@ -391,6 +393,8 @@ sum(getvalue(m_mip2[:v]))
 #
 # getvalue(m_mip[:P]) ./ p_old
 
+v_init = getvalue(m_mip[:v])
+p_init = getvalue(m_mip[:P])
 
 # %% two stage formulation
 v_init = zeros(N)
@@ -438,6 +442,7 @@ N - sum(xor.(trade_possible, v_post .<= 1e-10))
 
 # no_trade_but_possible = .!xor.(trade_possible, v_init .<= 1e-10)
 
+v_post = copy(v_init)
 # this strategy might be a bit strict. might be playable by proposing very large p_bar
 for i in find(trade_possible)
     for ip in find_t_b[t_b[i]]
