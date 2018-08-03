@@ -49,3 +49,16 @@ todo
     - for n = 10, N = 100 it takes 90s, compared to the reported 0.32s in the manuscript. so Gurobi is a lot faster or i missed some code optimizations or the realistic workload produces simpler problems
 - there must be some way to exploit that the problem only contains few *difficult* variables (p) and for fixed p becomes a linear problem!
   - iterative approach seems to get stuck. maybe the mip formulation is as effecient as it gets? (up to monotonie in z etc.)
+
+## 2018-08-03
+
+- searching for stuff like "linear programming conditional constraints" turned up an interesting reference, [](https://optimization.mccormick.northwestern.edu/index.php/Disjunctive_inequalities)
+  - i should check whether the two different approaches conincide in this problem. otherwise trying the other one out might be interesting
+  - problems seem to be different, so i should try it out.
+  - consistent with the linked explanations, the big-M method is a lot slower than the convex hull method (n = 10, N = 200: 240s vs 1400s)
+  - it lookes like the conxev hull method is essentially equivalent to the approach in the manuscript, but there are some unnecessary inequalities (which might not impect performance anyways, but lets see what happens if they are left out)
+    - ok, the additional inequalities seem to imporve performance‽ so it turns out that the original formulations is already quite performant
+  - one thing that remains is to check ehere the equivalence z_i = 0, trade not possible is usefull. why not allow z_i = 0 for posiible trades which are however not executed?
+- i should really try out some commercial solvers (e.g. gurobi) to see if my code is bad or if my solvers are slow. losing a factor of 100 in time to tolution is not really acceptable!
+  - ok, gurobi seems to perform way better than the other solvers I tried (Cbc, SCIP)
+- next step would be to work with more realistic data. but i do not have it... lets see.
