@@ -1,7 +1,7 @@
 # %% some experiments using JuMP
 
 using JuMP
-using Ipopt, SCIP, Clp, Cbc
+using Ipopt, SCIP, Clp, Cbc, Gurobi
 
 function setup_nlp!(m, n, N, t_b, t_s, x_bar, y_bar, p_bar, p_old, delta, gamma, v_init, p_init)
     @variable(m, v[i=1:N] >= 0, start = v_init[i])
@@ -94,11 +94,37 @@ function setup_mip!(m, n, N, t_b, t_s, x_bar, y_bar, p_bar, P_old, P_max, P_min,
         @constraint(m, v[i] <= p_b[i, 1] * x_bar[i])
         @constraint(m, v[i] <= p_s[i, 1] * y_bar[i])
 
-        @constraint(m, p_b[i, 0] >= p_bar[i] * p_s[i, 0] * (1 - epsilon))
+        @constraint(m, p_b[i, 0] >= p_bar[i] * p_s[i, 0])
         @constraint(m, p_b[i, 1] <= p_bar[i] * p_s[i, 1])
     end
 
     @constraint(m, sum(P[i] * gamma[i] for i in 1:n) == 1)
+
+    return m
+end
+
+function setup_mip2!(m, n, N, t_b, t_s, x_bar, y_bar, p_bar, p_min, p_max, gamma, v_init, p_init, z_init)
+    @variable(m, v[i=1:N] >= 0, start = v_init[i])
+    @variable(m, z[i=1:N], category=:Bin, start = z_init[i])
+    @variable(m, p_min[i] <= p[i=1:n] <= p_max[i], start = p_init[i])
+
+    @objective(m, Max, sum(v))
+
+    for j in 1:n
+        @constraint(m, sum(v[i] for i in find_t_b[j]) == sum(v[i] for i in find_t_s[j]))
+    end
+
+    for i in 1:N
+        @constraint(m, v[i] <= p_max[t_b[i]] * x_bar[i] * z[i])
+        @constraint(m, v[i] <= p_max[t_s[i]] * y_bar[i] * z[i])
+
+        @constraint(m, v[i] <= p[t_b[i]] * x_bar[i])
+        @constraint(m, v[i] <= p[t_s[i]] * y_bar[i])
+
+        @constraint(m, p[t_b[i]] <= p_bar[i] * p[t_s[i]] + p_max[t_b[i]] * (1 - z[i]))
+    end
+
+    @constraint(m, sum(p[i] * gamma[i] for i in 1:n) == 1)
 
     return m
 end
@@ -256,7 +282,7 @@ println("v = ", getvalue(v))
 # TODO: start from orders and not from the final data representation
 Base.Random.srand(42) # set random seed for reproducibility
 
-n = 10
+n = 20
 N = 100
 
 t_b = Int[]
@@ -280,13 +306,13 @@ y_bar = 0.5 + rand(N)
 
 delta = 0.5
 p_old = rand(n)
+p_max = (1 + delta) * p_old
+p_min = 1 / (1 + delta) * p_old
 p_bar = [p_old[t_b[i]] / p_old[t_s[i]] * (0.9 + rand() - 0.5) for i in 1:N] # the name p_bar is used instead of pi
 
 gamma = 1 / n ./ p_old;
 
 # %% iterative LP formulation
-p_max = (1 + delta) * p_old
-p_min = 1 / (1 + delta) * p_old
 p_init = p_old
 v_init = zeros(N)
 
@@ -332,27 +358,38 @@ p_init = getvalue(m_mip[:P]) ./ p_old
 
 
 # %% MIP formulations
-p_max = (1 + delta) * p_old
-p_min = 1 / (1 + delta) * p_old
-
 epsilon = 1e-5
 
 v_init = zeros(N)
 p_init = p_old
 z_init = p_init[t_b] ./ p_init[t_s] .<= p_bar
 
-m_mip = Model(solver = SCIPSolver())
-# m_mip = Model(solver = CbcSolver())
+m_mip = Model(solver = GurobiSolver(Threads=1))
 
-# setup_mip!(m_mip, n, N, t_b, t_s, x_bar, y_bar, p_bar, p_old, p_max, p_min, gamma, v_init, p_init, z_init)
-setup_mip!(m_mip, n, N, t_b, t_s, x_bar, y_bar, p_bar, p_old, p_max, p_min, gamma, v_init, p_init, z_init)
+setup_mip!(m_mip, n, N, t_b, t_s, x_bar, y_bar, p_bar, p_old, p_max, p_min, gamma, v_init, p_init, z_init, epsilon)
+
+# JuMP.build(m_mip)
+# grb = JuMP.internalmodel(m_mip).inner  # get the Gurobi.Model object
+# Gurobi.tune_model(grb)
 
 @time status = solve(m_mip)
 
-sum(getvalue(m_mip[:v]))
-find(.!(trade_possible .<= (p_init[t_b] .<= p_bar .* p_init[t_s])))
+m_mip2 = Model(solver = GurobiSolver())
 
-getvalue(m_mip[:P]) ./ p_old
+m_mip2 = setup_mip2!(m_mip2, n, N, t_b, t_s, x_bar, y_bar, p_bar, p_min, p_max, gamma, v_init, p_init, z_init)
+
+@time status = solve(m_mip2)
+
+m_mip2 = Model(solver = SCIPSolver())
+# m_mip = Model(solver = CbcSolver())
+
+m_mip2 = setup_mip2!(m_mip2, n, N, t_b, t_s, x_bar, y_bar, p_bar, p_min, p_max, gamma, v_init, p_init, z_init)
+
+@time status = solve(m_mip2)
+sum(getvalue(m_mip2[:v]))
+# find(.!(trade_possible .<= (p_init[t_b] .<= p_bar .* p_init[t_s])))
+#
+# getvalue(m_mip[:P]) ./ p_old
 
 
 # %% two stage formulation
